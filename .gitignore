@@ -149,3 +149,4 @@ cython_debug/
 #my presonal
 shlack/
 vk_config.v2.json
+**/data/**
