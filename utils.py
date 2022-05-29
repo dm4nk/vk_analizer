@@ -1,4 +1,10 @@
+import re
 from math import floor
+
+from nltk.corpus import stopwords
+from nltk.tokenize import RegexpTokenizer
+from num2words import num2words
+from pymorphy2 import MorphAnalyzer
 from tqdm import tqdm
 
 
@@ -33,3 +39,34 @@ class LikesDivider:
 
     def get_likes_groups(self):
         return [str(self.get_group_borders(g)) for g in range(self.__group_count)]
+
+
+class Preprocessor:
+    def __init__(self):
+        self.__rt = RegexpTokenizer(r'\w+')
+        self.__morph = MorphAnalyzer()
+        self.__hashed_stop_words = [hash(word) for word in stopwords.words()]
+
+    def __preprocess_text(self, tokens: str) -> str:
+        tokens = self.__rt.tokenize(re.sub('http[s]?://\S+', '', tokens))
+        text = ""
+
+        for i, w in enumerate(tokens):
+            tokens[i] = self.__morph.parse(num2words(w) if w.isnumeric() else w)[0].normal_form
+
+        tokens = [words for words in tokens if not hash(words) in self.__hashed_stop_words]
+
+        # i in range(1, len(tokens) - 1):
+        #    text += tokens[i - 1] + tokens[i] + tokens[i + 1] + '\t'
+
+        for w in tokens:
+            text += w + " "
+
+        return text
+
+    def preprocess_texts(self, texts: [str]) -> [str]:
+        processed_texts = []
+        for text in tqdm(texts, desc="Preprocessing"):
+            processed_texts.append(self.__preprocess_text(text))
+
+        return processed_texts
