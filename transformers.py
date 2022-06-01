@@ -31,3 +31,6 @@ class LikesTransformer(BaseEstimator, TransformerMixin):
 
     def get_likes_groups(self):
         return self.__likes_divider.get_likes_groups()
+
+    def get_group_borders(self, group: int):
+        return self.__likes_divider.get_group_borders(group)

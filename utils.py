@@ -35,7 +35,7 @@ class LikesDivider:
         return self.__likes_groups[like]
 
     def get_group_borders(self, group: int):
-        return self.__borders[group], self.__borders[group+1]
+        return self.__borders[group], self.__borders[group + 1]
 
     def get_likes_groups(self):
         return [str(self.get_group_borders(g)) for g in range(self.__group_count)]
@@ -52,7 +52,7 @@ class Preprocessor:
         text = ""
 
         for i, w in enumerate(tokens):
-            tokens[i] = self.__morph.parse(num2words(w) if w.isnumeric() else w)[0].normal_form
+            tokens[i] = self.__morph.parse(num2words(w) if w.isdecimal() else w)[0].normal_form
 
         tokens = [words for words in tokens if not hash(words) in self.__hashed_stop_words]
 
