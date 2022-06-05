@@ -1,5 +1,4 @@
 import re
-from math import floor
 
 from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
@@ -11,41 +10,44 @@ from tqdm import tqdm
 class LikesDivider:
     def __init__(self, likes: [int], group_count: int):
         self.__group_count = group_count
-        self.__likes_groups = {}
-        self.__groups_likes = {}
         self.__likes = sorted(likes)
-        self.__n = len(likes)
+        likes_len = len(likes)
         self.__borders = []
-        for i, like in tqdm(enumerate(self.__likes), desc="Generating likes groups"):
-            current_gr = floor(i * group_count / self.__n)
-            self.__likes_groups[like] = current_gr
-            self.__groups_likes[current_gr] = like
+        if self.__group_count > likes_len:
+            raise AttributeError('group_count > len(likes)')
 
-        self.__borders.append(self.__likes[0])
+        step = int(likes_len / group_count)
 
-        for i in range(1, self.__group_count):
-            self.__borders.append(self.__likes[floor(i / self.__group_count * self.__n)])
+        for i in range(group_count):
+            self.__borders.append(self.__likes[i * step])
 
-        self.__borders.append(self.__likes[self.__n - 1])
-
-        print('Likes groups: ', self.__likes_groups)
-        print('Borders: ', self.__borders)
+        print('Borders: ' + str(self.__borders))
 
     def get_like_group(self, like: int):
-        return self.__likes_groups[like]
+        if like <= self.__borders[0]:
+            return 0
 
-    def get_group_borders(self, group: int):
-        return self.__borders[group], self.__borders[group + 1]
+        for i in range(len(self.__borders)-1):
+            if self.__borders[i] < like <= self.__borders[i + 1]:
+                return i
+
+        if like > self.__borders[-1]:
+            return self.__group_count-1
+
+        return None
+
+    def get_group_right_border(self, group: int):
+        return self.__borders[group]
 
     def get_likes_groups(self):
-        return [str(self.get_group_borders(g)) for g in range(self.__group_count)]
+        return [str(self.get_group_right_border(g)) for g in range(self.__group_count)]
 
 
 class Preprocessor:
     def __init__(self):
         self.__rt = RegexpTokenizer(r'\w+')
         self.__morph = MorphAnalyzer()
-        self.__hashed_stop_words = [hash(word) for word in stopwords.words()]
+        self.__hashed_stop_words = set([hash(word) for word in stopwords.words()])
 
     def __preprocess_text(self, tokens: str) -> str:
         tokens = self.__rt.tokenize(re.sub('http[s]?://\S+', '', tokens))

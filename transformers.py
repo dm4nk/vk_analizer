@@ -29,8 +29,14 @@ class LikesTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         return [self.__likes_divider.get_like_group(like) for like in X]
 
+    def fit_transform(self, X, y=None, **fit_params):
+        return self.fit(X, y).transform(X)
+
     def get_likes_groups(self):
         return self.__likes_divider.get_likes_groups()
 
-    def get_group_borders(self, group: int):
-        return self.__likes_divider.get_group_borders(group)
+    def get_like_group(self, like: int):
+        return self.__likes_divider.get_like_group(like)
+
+    def get_group_right_border(self, group: int):
+        return self.__likes_divider.get_group_right_border(group)

@@ -7,14 +7,10 @@ import xlsxwriter
 from sklearn.metrics import confusion_matrix
 from tqdm import tqdm
 
-from transformers import LikesTransformer
 
-likes_transformer = LikesTransformer()
-
-
-def draw_confusion_matrix(predicted_likes_groups, test_likes_groups):
+def draw_confusion_matrix(predicted_likes_groups, test_likes_groups, groups):
     cm = confusion_matrix(test_likes_groups, predicted_likes_groups)
-    df_cm = pd.DataFrame(cm, likes_transformer.get_likes_groups(), likes_transformer.get_likes_groups())
+    df_cm = pd.DataFrame(cm, groups, groups)
     sn.heatmap(df_cm, annot=True, fmt='d')
     plt.show()
 

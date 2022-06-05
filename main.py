@@ -2,23 +2,21 @@ import numpy as np
 import pymorphy2
 import vk_api
 from matplotlib import pyplot as plt
-from nltk.corpus import stopwords
 from nltk.tokenize import RegexpTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 
-from immaterial import data_from_skillbox_csv
-from transformers import PreprocessTransformer
+from immaterial import data_from_skillbox_csv, draw_confusion_matrix
+from transformers import PreprocessTransformer, LikesTransformer
 
 rt = RegexpTokenizer(r'\w+')
 morph = pymorphy2.MorphAnalyzer()
-tf_idf = TfidfVectorizer(ngram_range=(1, 2), lowercase=True, max_features=150000)
-
-nu_svc = SVR(verbose=True, max_iter=-1, cache_size=1000)
+tf_idf = TfidfVectorizer(max_features=150000)  # add ngram_range=(1, 2)
+svr = SVR(verbose=True, kernel="linear", C=100, gamma="auto")
 preprocessor = PreprocessTransformer()
-hashed_stop_words = [hash(word) for word in stopwords.words()]
+likes_transformer = LikesTransformer()
 IMPORTANT_WORDS_COUNT = 10
 
 
@@ -67,23 +65,27 @@ def check_quality(texts, likes):
     texts = tf_idf.fit_transform(texts).toarray()
 
     train_texts, test_texts, train_likes, test_likes = train_test_split(texts, likes,
-                                                                        test_size=0.1,
+                                                                        test_size=0.5,
                                                                         shuffle=True)
 
-    nu_svc.fit(train_texts, train_likes)
+    svr.fit(train_texts, train_likes)
 
-    predicted_likes = nu_svc.predict(test_texts)
+    predicted_likes = svr.predict(test_texts)
 
-    print(test_likes)
-    print(predicted_likes)
     x = range(0, len(test_likes))
-
     plt.plot(x, test_likes, label='test_likes')
     plt.plot(x, predicted_likes, label='predicted_likes')
 
-    errors = mean_squared_error(test_likes, predicted_likes)
-    print(errors)
-    plt.show()
+    error = mean_squared_error(test_likes, predicted_likes)
+    print('Mean quared_error: ' + str(error))
+
+    test_likes_groups = likes_transformer.fit_transform(test_likes)
+    predicted_likes_groups = [likes_transformer.get_like_group(like) for like in predicted_likes]
+
+    print('Accuracy: ' + str(accuracy_score(test_likes_groups, predicted_likes_groups)))
+
+    draw_confusion_matrix(predicted_likes_groups, test_likes_groups,
+                          ['< ' + str(border) for border in likes_transformer.get_likes_groups()])
 
 
 def get_most_important_words(transformed_text):
@@ -99,9 +101,9 @@ def execute(group_domain, text_to_estimate):
 
     texts = preprocessor.fit_transform(texts)
     texts_array = tf_idf.fit_transform(texts).toarray()
-    nu_svc.fit(texts_array[:-1], likes)
+    svr.fit(texts_array[:-1], likes)
 
-    predicted_like = nu_svc.predict([texts_array[-1]])[0]
+    predicted_like = svr.predict([texts_array[-1]])[0]
 
     most_important_words = get_most_important_words(texts_array)
 
@@ -110,13 +112,8 @@ def execute(group_domain, text_to_estimate):
 
 def main():
     texts, likes = data_from_skillbox_csv()
-    # texts, likes = get_test_data_from_file('data/data_from_javatutorial.json')
 
     check_quality(texts, likes)
-
-    # borders, most_important_words = execute('psyhology', get_text())
-    # print('Predicted Like: ' + str(borders))
-    # print('Words: ' + str(most_important_words))
 
 
 if __name__ == '__main__':
