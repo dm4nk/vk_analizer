@@ -5,6 +5,7 @@ from nltk.tokenize import RegexpTokenizer
 from num2words import num2words
 from pymorphy2 import MorphAnalyzer
 from tqdm import tqdm
+import vk_api
 
 
 class LikesDivider:
@@ -27,12 +28,12 @@ class LikesDivider:
         if like <= self.__borders[0]:
             return 0
 
-        for i in range(len(self.__borders)-1):
+        for i in range(len(self.__borders) - 1):
             if self.__borders[i] < like <= self.__borders[i + 1]:
                 return i
 
         if like > self.__borders[-1]:
-            return self.__group_count-1
+            return self.__group_count - 1
 
         return None
 
@@ -58,9 +59,6 @@ class Preprocessor:
 
         tokens = [words for words in tokens if not hash(words) in self.__hashed_stop_words]
 
-        # i in range(1, len(tokens) - 1):
-        #    text += tokens[i - 1] + tokens[i] + tokens[i + 1] + '\t'
-
         for w in tokens:
             text += w + " "
 
@@ -72,3 +70,45 @@ class Preprocessor:
             processed_texts.append(self.__preprocess_text(text))
 
         return processed_texts
+
+
+def get_texts_and_likes_from_json(json_data):
+    texts = []
+    likes = []
+    for item in json_data['items']:
+        likes.append(item['likes']['count'])
+        texts.append(item['text'])
+
+    return texts, likes
+
+
+def auth_handler():
+    return input("Enter authentication code: "), True
+
+
+class VkApi:
+    def __init__(self, login, password):
+        self.__login = login
+        self.__password = password
+
+    def get_group_posts_and_likes(self, group_domain) -> (str, str):
+        vk_session = vk_api.VkApi(
+            self.__login, self.__password,
+            auth_handler=auth_handler
+        )
+
+        vk_session.auth()
+
+        vk = vk_session.get_api()
+
+        texts, likes = [], []
+
+        for i in range(0, 5):
+            json_data = vk.wall.get(domain=group_domain, count=100, filter='owner', offset=100 * i)
+            print('Got ' + str(i) + ' response')
+            t, l = get_texts_and_likes_from_json(json_data)
+            texts += t
+            likes += l
+
+        print(texts)
+        return texts, likes
